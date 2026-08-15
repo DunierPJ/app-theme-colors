@@ -7,29 +7,29 @@ uses
 
 type
   TColorScheme = record
-	Primary,
-	OnPrimary,
-	PrimaryContainer,
-	OnPrimaryContainer,
-	Secondary,
-	OnSecondary,
-	SecondaryContainer,
-	OnSecondaryContainer,
-	Tertiary,
-	OnTertiary,
-	TertiaryContainer,
-	OnTertiaryContainer,
-	Error,
-	OnError,
-	ErrorContainer,
-	OnErrorContainer,
-	Background,
-	OnBackground,
-	Surface,
-	OnSurface,
-	SurfaceVariant,
-	OnSurfaceVariant,
-	Outline;
+	Primary: TAlphaColor;
+	OnPrimary: TAlphaColor;
+	PrimaryContainer: TAlphaColor;
+	OnPrimaryContainer: TAlphaColor;
+	Secondary: TAlphaColor;
+	OnSecondary: TAlphaColor;
+	SecondaryContainer: TAlphaColor;
+	OnSecondaryContainer: TAlphaColor;
+	Tertiary: TAlphaColor;
+	OnTertiary: TAlphaColor;
+	TertiaryContainer: TAlphaColor;
+	OnTertiaryContainer: TAlphaColor;
+	Error: TAlphaColor;
+	OnError: TAlphaColor;
+	ErrorContainer: TAlphaColor;
+	OnErrorContainer: TAlphaColor;
+	Background: TAlphaColor;
+	OnBackground: TAlphaColor;
+	Surface: TAlphaColor;
+	OnSurface: TAlphaColor;
+	SurfaceVariant: TAlphaColor;
+	OnSurfaceVariant: TAlphaColor;
+	Outline: TAlphaColor;
   end;
 
 const
@@ -56,7 +56,7 @@ const
     OnSurface: $FF313332;
     SurfaceVariant: $FFd8e6de;
     OnSurfaceVariant: $FF53665b;
-    Outline: $FF7d9988;
+    Outline: $FF7d9988
   );
 
   DarkScheme: TColorScheme = (
@@ -82,7 +82,7 @@ const
     OnSurface: $FFe2e6e4;
     SurfaceVariant: $FF53665b;
     OnSurfaceVariant: $FFd2e6da;
-    Outline: $FF9eb3a6;
+    Outline: $FF9eb3a6
   );
 
 implementation
