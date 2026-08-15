@@ -3,7 +3,11 @@ unit App.ThemeManager;
 interface
 
 uses
-  System.UITypes, System.Messaging, FMX.Platform, App.ColorScheme, App.ThemeMessage;
+  System.UITypes, 
+  System.Messaging, 
+  FMX.Platform, 
+  App.ColorScheme, 
+  App.ThemeMessage;
 
 type
   TThemeMode = (tmSystem, tmLight, tmDark);

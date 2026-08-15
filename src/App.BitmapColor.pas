@@ -3,7 +3,10 @@ unit App.BitmapColor;
 interface
 
 uses
-  System.UITypes, System.Generics.Collections, FMX.Graphics, FMX.Types;
+  System.UITypes, 
+  System.Generics.Collections, 
+  FMX.Graphics, 
+  FMX.Types;
 
 type
   TBitmapColorHelper = class

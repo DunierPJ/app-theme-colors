@@ -3,9 +3,16 @@ unit App.ThemeApplier;
 interface
 
 uses
-  System.Classes, System.SysUtils, System.Rtti, System.UITypes,
-  FMX.Types, FMX.Objects, FMX.Text,
-  App.ColorScheme, App.ThemeManager, App.BitmapColor;
+  System.Classes, 
+  System.SysUtils, 
+  System.Rtti, 
+  System.UITypes,
+  FMX.Types, 
+  FMX.Objects, 
+  FMX.Text,
+  App.ColorScheme, 
+  App.ThemeManager, 
+  App.BitmapColor;
 
 type
   TThemeApplier = class
