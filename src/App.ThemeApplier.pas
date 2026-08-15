@@ -1,4 +1,4 @@
-unit App.ThemeApplier;
+﻿unit App.ThemeApplier;
 
 interface
 
@@ -10,9 +10,11 @@ uses
   FMX.Types, 
   FMX.Objects, 
   FMX.Text,
+  FMX.Graphics,
   App.ColorScheme, 
   App.ThemeManager, 
-  App.BitmapColor;
+  App.BitmapColor,
+  System.Generics.Collections;
 
 type
   TThemeApplier = class
@@ -23,8 +25,8 @@ type
     class procedure ApplyTag(AObject: TFmxObject; const Scheme: TColorScheme);
    
   public
-    class constructor TThemeApplier.Create;
-    class destructor TThemeApplier.Destroy;
+    class constructor Create;
+    class destructor Destroy;
     class procedure ApplyToTree(ARoot: TFmxObject);
   end;
 
@@ -52,7 +54,7 @@ begin
     Field := Ctx.GetType(TypeInfo(TColorScheme)).GetField(AName);
     if Assigned(Field) then
     begin
-      AColor := TAlphaColor(Field.GetValue(@Scheme).AsCardinal);
+      AColor := TAlphaColor(Field.GetValue(@Scheme).AsType<Cardinal>);
       Result := True;
     end;
   finally
@@ -64,7 +66,7 @@ class procedure TThemeApplier.ApplyTag(AObject: TFmxObject; const Scheme: TColor
 var
   Parts: TArray<string>;
   Kind, RoleName: string;
-  Cor, Origem: TAlphaColor;
+  Cor: TAlphaColor;
 begin
   if AObject.TagString.IsEmpty then
     Exit;
@@ -77,7 +79,7 @@ begin
   RoleName := Parts[1].Trim;
 
   if not ColorByName(Scheme, RoleName, Cor) then
-    Exit; // TagString com nome de papel que não existe no record - ignora
+    Exit;
 
   if Kind.Equals('Fill') and (AObject is TShape) then
     TShape(AObject).Fill.Color := Cor
@@ -89,15 +91,7 @@ begin
     TText(AObject).Color := Cor
 
   else if Kind.Equals('Bitmap') and (AObject is TImage) then
-  begin
-    if not FDominantCache.TryGetValue(TImage(AObject).Bitmap, Origem) then
-    begin
-      Origem := TBitmapColorHelper.GetDominantOpaqueColor(TImage(AObject).Bitmap);
-      FDominantCache.Add(TImage(AObject).Bitmap, Origem);
-    end;
-
-    TImage(AObject).Bitmap.ReplaceOpaqueColor(Origem, Cor);
-  end;
+    TImage(AObject).Bitmap.ReplaceOpaqueColor(Cor);
 end;
 
 class procedure TThemeApplier.ApplyToTree(ARoot: TFmxObject);

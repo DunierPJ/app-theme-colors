@@ -1,4 +1,4 @@
-unit App.BitmapColor;
+﻿unit App.BitmapColor;
 
 interface
 
@@ -24,12 +24,13 @@ var
   Data: TBitmapData;
   X, Y: Integer;
   Pixel: TAlphaColor;
+  Count: Integer;
   Counts: TDictionary<TAlphaColor, Integer>;
   Pair: TPair<TAlphaColor, Integer>;
   BestColor: TAlphaColor;
   BestCount: Integer;
 begin
-  BestColor := TAlphaColorRec.Black; // fallback se não achar nenhum pixel opaco
+  BestColor := TAlphaColorRec.Black;
   if (ABitmap = nil) or ABitmap.IsEmpty then
     Exit(BestColor);
 
@@ -41,8 +42,12 @@ begin
         for X := 0 to ABitmap.Width - 1 do
         begin
           Pixel := Data.GetPixel(X, Y);
-          if TAlphaColorRec(Pixel).A = 255 then // só pixel 100% opaco entra na contagem
-            Counts.AddOrSetValue(Pixel, Counts.GetValueOrDefault(Pixel, 0) + 1);
+          if TAlphaColorRec(Pixel).A = 255 then
+          begin
+            if not Counts.TryGetValue(Pixel, Count) then
+              Count := 0;
+            Counts.AddOrSetValue(Pixel, Count + 1);
+          end;
         end;
     finally
       ABitmap.Unmap(Data);

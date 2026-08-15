@@ -1,4 +1,4 @@
-unit App.ThemeManager;
+﻿unit App.ThemeManager;
 
 interface
 
@@ -17,7 +17,7 @@ type
     class var FMode: TThemeMode;
     class function SystemIsDark: Boolean; static;
     class procedure AppearanceChanged(const Sender: TObject; const M: TMessage); static;
-    class procedure TThemeManager.SetMode(const Value: TThemeMode); static;
+    class procedure SetMode(const Value: TThemeMode); static;
   public
     class constructor Create;
     class destructor Destroy;
@@ -31,12 +31,12 @@ implementation
 class constructor TThemeManager.Create;
 begin
   FMode := tmSystem;
-  TMessageManager.DefaultManager.SubscribeToMessage(TMessageSystemAppearanceChanged, AppearanceChanged);
+  TMessageManager.DefaultManager.SubscribeToMessage(TMessageReceivedNotification, AppearanceChanged);
 end;
 
 class destructor TThemeManager.Destroy;
 begin
-  TMessageManager.DefaultManager.Unsubscribe(TMessageSystemAppearanceChanged, AppearanceChanged);
+  TMessageManager.DefaultManager.Unsubscribe(TMessageReceivedNotification, AppearanceChanged);
 end;
 
 // e no setter de Mode, se você tornar a property com write de método em vez de campo direto:
