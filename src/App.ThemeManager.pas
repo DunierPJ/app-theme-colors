@@ -92,7 +92,9 @@ class procedure TThemeManager.ApplySystemBars;
 var
   Window: JWindow;
   DecorView: JView;
+  InsetsController: JWindowInsetsController;
   ViewFlags: Integer;
+  Appearance, Mask: Integer;
   CurScheme: TColorScheme;
   IsDarkMode: Boolean;
 {$ENDIF}
@@ -100,10 +102,8 @@ begin
 {$IFDEF ANDROID}
   if (TAndroidHelper.Activity = nil) or (TAndroidHelper.Activity.getWindow = nil) then
     Exit;
-
   CurScheme := Scheme;
   IsDarkMode := IsDark;
-
   TThread.Queue(nil,
     procedure
     begin
@@ -113,17 +113,18 @@ begin
         DecorView := Window.getDecorView;
         if DecorView = nil then Exit;
 
-        if TJBuild_VERSION.SDK_INT >= 21 then
+        // ---- SDK_INT >= 21 (Android 5.0) — cor de fundo das barras ----
+        if TJBuild_VERSION.JavaClass.SDK_INT >= 21 then
         begin
           Window.clearFlags(TJWindowManager_LayoutParams.JavaClass.FLAG_TRANSLUCENT_STATUS or
-                            TJWindowManager_LayoutParams.JavaClass.FLAG_TRANSLUCENT_NAVIGATION_BAR);
+                            TJWindowManager_LayoutParams.JavaClass.FLAG_TRANSLUCENT_NAVIGATION);
           Window.addFlags(TJWindowManager_LayoutParams.JavaClass.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-
           Window.setStatusBarColor(CurScheme.Surface);
           Window.setNavigationBarColor(CurScheme.Surface);
         end;
 
-        if TJBuild_VERSION.SDK_INT >= 23 then
+        // ---- SDK_INT >= 23 (Android 6.0) — ícones da status bar ----
+        if TJBuild_VERSION.JavaClass.SDK_INT >= 23 then
         begin
           ViewFlags := DecorView.getSystemUiVisibility;
           if not IsDarkMode then
@@ -131,7 +132,8 @@ begin
           else
             ViewFlags := ViewFlags and not TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
 
-          if TJBuild_VERSION.SDK_INT >= 26 then
+          // ---- SDK_INT >= 26 (Android 8.0) — ícones da nav bar ----
+          if TJBuild_VERSION.JavaClass.SDK_INT >= 26 then
           begin
             if not IsDarkMode then
               ViewFlags := ViewFlags or TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
@@ -139,7 +141,24 @@ begin
               ViewFlags := ViewFlags and not TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
           end;
 
-          DecorView.setSystemUiVisibility(ViewFlags);
+          // ---- SDK_INT >= 30 (Android 11) — API nova via WindowInsetsController ----
+          if TJBuild_VERSION.JavaClass.SDK_INT >= 30 then
+          begin
+            InsetsController := Window.getInsetsController;
+            if InsetsController <> nil then
+            begin
+              Mask := TJWindowInsetsController.JavaClass.APPEARANCE_LIGHT_STATUS_BARS or
+                      TJWindowInsetsController.JavaClass.APPEARANCE_LIGHT_NAVIGATION_BARS;
+
+              Appearance := 0;
+              if not IsDarkMode then
+                Appearance := Mask;
+
+              InsetsController.setSystemBarsAppearance(Appearance, Mask);
+            end;
+          end
+          else
+            DecorView.setSystemUiVisibility(ViewFlags);
         end;
       except
         // Ignora erros de ciclo de vida da Activity
