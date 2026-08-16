@@ -48,13 +48,13 @@ begin
   FHasCustomLight := False;
   FHasCustomDark := False;
   if TMessageManager.DefaultManager <> nil then
-    TMessageManager.DefaultManager.SubscribeToMessage(TOSOptionChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.SubscribeToMessage(TSystemAppearanceChangedMessage, AppearanceChanged);
 end;
 
 class destructor TThemeManager.Destroy;
 begin
   if TMessageManager.DefaultManager <> nil then
-    TMessageManager.DefaultManager.Unsubscribe(TOSOptionChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.Unsubscribe(TSystemAppearanceChangedMessage, AppearanceChanged);
 end;
 
 class procedure TThemeManager.SetMode(const Value: TThemeMode);
