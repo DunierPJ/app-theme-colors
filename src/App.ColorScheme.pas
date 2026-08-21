@@ -2,6 +2,9 @@ unit App.ColorScheme;
 
 interface
 
+uses
+  System.UITypes;
+
 type
   TColorScheme = record
     Primary: TAlphaColor;
@@ -27,6 +30,7 @@ type
     SurfaceVariant: TAlphaColor;
     OnSurfaceVariant: TAlphaColor;
     Outline: TAlphaColor;
+  end;
 
 const
   LightScheme: TColorScheme = (
@@ -84,4 +88,3 @@ const
 implementation
 
 end.
-

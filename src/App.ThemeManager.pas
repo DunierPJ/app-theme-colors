@@ -34,7 +34,6 @@ type
     function IsDark: Boolean;
     function Scheme: TColorScheme;
     procedure SetCustomSchemes(const ALight, ADark: TColorScheme);
-    procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
     procedure ApplySystemBars;
     procedure AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener);
     property Mode: TThemeMode read GetMode write SetMode;
@@ -52,7 +51,6 @@ type
     class function IsDark: Boolean; static;
     class function Scheme: TColorScheme; static;
     class procedure SetCustomSchemes(const ALight, ADark: TColorScheme); static;
-    class procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string); static;
     class procedure ApplySystemBars; static;
     class procedure AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener); static;
     class property Instance: IThemeManager read FInstance;
@@ -187,14 +185,6 @@ begin
     TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
 end;
 
-procedure TThemeManagerImpl.LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
-begin
-  SetCustomSchemes(
-    TColorScheme.FromJSON(ALightJson, LightScheme),
-    TColorScheme.FromJSON(ADarkJson, DarkScheme)
-  );
-end;
-
 procedure TThemeManagerImpl.ApplySystemBars;
 begin
   if FSystemBarsService <> nil then
@@ -256,11 +246,6 @@ end;
 class procedure TThemeManager.SetCustomSchemes(const ALight, ADark: TColorScheme);
 begin
   FInstance.SetCustomSchemes(ALight, ADark);
-end;
-
-class procedure TThemeManager.LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
-begin
-  FInstance.LoadSchemesFromJSON(ALightJson, ADarkJson);
 end;
 
 class procedure TThemeManager.ApplySystemBars;

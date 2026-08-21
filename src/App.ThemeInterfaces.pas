@@ -27,7 +27,6 @@ type
     function IsDark: Boolean;
     function Scheme: TColorScheme;
     procedure SetCustomSchemes(const ALight, ADark: TColorScheme);
-    procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
     procedure ApplySystemBars;
     procedure AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener);
 

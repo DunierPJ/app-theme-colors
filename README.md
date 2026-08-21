@@ -2,7 +2,7 @@
 
 Theming claro/escuro (Material Design 3) para aplicações **Delphi FireMonkey (FMX)**.
 
-A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente o tema do sistema operacional, pinta a **Status Bar** e **Navigation Bar** no Android, carrega paletas via **JSON** e aplica as cores nos componentes por meio de `TagString`, com suporte nativo aos controles FireMonkey e **Skia FMX**.
+A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente o tema do sistema operacional, pinta a **Status Bar** e **Navigation Bar** no Android e aplica as cores nos componentes por meio de `TagString`, com suporte nativo aos controles FireMonkey e **Skia FMX**.
 
 ## Recursos
 
@@ -11,7 +11,7 @@ A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente 
 - **Pintura de System Bars no Android** — altera automaticamente as cores e o tema dos ícones (Light/Dark) da **Status Bar** e **Navigation Bar**.
 - **Múltiplas Tags no mesmo componente** — suporte a declarar várias regras no `TagString` separadas por ponto e vírgula `;` (ex.: `Fill:Surface; Stroke:Outline`).
 - **Suporte Nativo ao Skia FMX** — suporte aos componentes Skia (`TSkLabel`, `TSkSvg`, `TSkAnimatedImage`).
-- **Personalização via JSON** — permite importar/exportar paletas `TColorScheme` diretamente a partir de arquivos ou strings JSON (ex.: temas gerados no Material Theme Builder).
+- **Esquemas Personalizáveis (Estilo Jetpack Compose)** — permite definir esquemas `TColorScheme` customizados em código puro.
 - **Aplicação automática e recursiva** — `TThemeApplier.ApplyToTree` percorre toda a árvore de componentes FMX e Skia.
 - **Roles nomeadas (Material Design 3)** — cores definidas por papel semântico (`Primary`, `Surface`, `Outline`, `Error` etc.), com paletas `Light` e `Dark` prontas.
 - **Recoloração segura de Bitmaps** — substitui a cor de bitmaps em `TImage` preservando o canal Alpha de transparência.
@@ -28,7 +28,7 @@ A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente 
 | `App.SystemBars.Android.*` | Suite nativa Android (ColorController, InsetsCalculator, VisibilityController, EventListener, WindowFix). |
 | `App.ThemeManager.pas` | Gerenciador core (`TThemeManagerImpl`), `AutoSubscribe` e Facade estático (`TThemeManager`). |
 | `App.ThemeApplier.pas` | Aplica cores na árvore FMX e Skia (`TSkLabel`, `TSkSvg`, `TSkAnimatedImage`) via `TagString`. |
-| `App.ColorScheme.pas` | Record `TColorScheme` com roles semânticas (Material Design 3) e suporte JSON (`FromJSON`). |
+| `App.ColorScheme.pas` | Record `TColorScheme` com roles semânticas (Material Design 3). |
 | `App.BitmapColor.pas` | Helper `TBitmapColorHelper` para cor dominante e recoloração preservando transparência. |
 | `App.ThemeMessage.pas` | Mensagens de notificação de troca de tema (`TThemeChangedMessage`). |
 
@@ -139,8 +139,8 @@ type
 | `IsDark` | função de classe | Retorna `True` se o tema ativo é escuro (considera o modo do sistema quando `Mode = tmSystem`). |
 | `Scheme` | função de classe | Retorna `LightScheme` ou `DarkScheme` (ou esquema customizado) conforme o tema ativo. |
 | `SetCustomSchemes` | procedimento de classe | Define esquemas customizados para Light e Dark. |
-| `LoadSchemesFromJSON` | procedimento de classe | Carrega e aplica esquemas a partir de strings JSON. |
 | `ApplySystemBars` | procedimento de classe | Aplica o estilo do tema às barras de status e navegação do SO. |
+| `AutoSubscribe` | procedimento de classe | Inscreve uma Form/Componente e desinscreve automaticamente no momento do Destroy. |
 | `Instance` | propriedade de classe | Acesso direto à instância `IThemeManager` subjacente. |
 
 Internamente, `TThemeManagerImpl` assina `TSystemAppearanceChangedMessage` (FMX) e, quando o sistema muda de aparência, reenvia `TThemeChangedMessage` para que a UI repinte.
