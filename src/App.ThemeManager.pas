@@ -115,13 +115,13 @@ begin
     FSystemBarsService := TSystemBarsService.Create;
 
   if TMessageManager.DefaultManager <> nil then
-    TMessageManager.DefaultManager.SubscribeToMessage(TSystemAppearanceChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.SubscribeToMessage(TThemeChangedMessage, AppearanceChanged);
 end;
 
 destructor TThemeManagerImpl.Destroy;
 begin
   if TMessageManager.DefaultManager <> nil then
-    TMessageManager.DefaultManager.Unsubscribe(TSystemAppearanceChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.Unsubscribe(TThemeChangedMessage, AppearanceChanged);
   FSystemThemeDetector := nil;
   FSystemBarsService := nil;
   inherited Destroy;
