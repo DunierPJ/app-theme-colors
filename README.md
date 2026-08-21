@@ -20,7 +20,6 @@ A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente 
 
 | Unidade | Responsabilidade |
 | --- | --- |
-<<<<<<< HEAD
 | `App.ThemeInterfaces.pas` | Interfaces `IThemeManager`, `ISystemThemeDetector` e `ISystemBarsService`. |
 | `App.SystemThemeDetector.pas` | Implementação de `ISystemThemeDetector` para detecção de tema do SO. |
 | `App.SystemBarsService.pas` | Implementação de `ISystemBarsService` para estilização nativa de System Bars. |
@@ -28,12 +27,10 @@ A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente 
 | `App.ThemeApplier.pas` | Aplica as cores na árvore FMX a partir de `TagString`; cache de cor dominante. |
 | `App.ColorScheme.pas` | Record `TColorScheme` com as roles de cor e as constantes `LightScheme` / `DarkScheme`. |
 | `App.BitmapColor.pas` | Helper para descobrir a cor opaca dominante de um bitmap. |
-=======
 | `App.ThemeManager.pas` | Modo de tema (`TThemeMode`), detecção nativa do SO, controle das barras do Android (`ApplySystemBars`) e despacho de `TThemeChangedMessage`. |
 | `App.ThemeApplier.pas` | Aplica as cores na árvore FMX/Skia a partir do `TagString` com suporte a múltiplas regras. |
 | `App.ColorScheme.pas` | Record `TColorScheme` com as roles de cor e suporte a importação/exportação JSON (`FromJSON`, `LoadFromFile`, `ToJSON`). |
 | `App.BitmapColor.pas` | Helper `TBitmapHelper` para cor dominante e recoloração preservando transparência (`ReplaceOpaqueColor`). |
->>>>>>> 13565dc80fb13b6b4288824333eab365ad2327cb
 | `App.ThemeMessage.pas` | Mensagens de notificação de troca de tema. |
 
 ## Requisitos
@@ -92,7 +89,6 @@ TThemeApplier.ApplyToTree(Self);
 
 ### 4. Carregar Temas Personalizados via JSON
 
-<<<<<<< HEAD
 Assine `TThemeChangedMessage` e repinte a UI. Isso cobre tanto a troca manual de `Mode` quanto a mudança de aparência do sistema operacional:
 
 ```pascal
@@ -231,32 +227,10 @@ end;
 
 ### Recolorindo um ícone de bitmap
 
-Defina o `TagString` do `TImage` como `Bitmap:Primary`. Ao aplicar o tema, a cor dominante do bitmap é substituída pela cor `Primary`:
+Defina o `TagString` do `TImage` como `Bitmap:Primary`. Ao aplicar o tema, a cor dominante do bitmap é substituída pela cor `Primary`
+
 =======
-Você pode carregar arquivos JSON gerados pelo **Material Theme Builder**:
->>>>>>> 13565dc80fb13b6b4288824333eab365ad2327cb
-
-```pascal
-// Carrega temas customizados a partir de JSON
-TThemeManager.LoadSchemesFromJSON(LightJsonString, DarkJsonString);
-TThemeApplier.ApplyToTree(Self);
-```
-
-Exemplo de formato JSON suportado:
-
-```json
-{
-  "Primary": "#0B9945",
-  "OnPrimary": "#FFFFFF",
-  "PrimaryContainer": "#A2E6BE",
-  "Background": "#FBFCDC",
-  "Surface": "#FBFCDC",
-  "OnSurface": "#313332",
-  "Outline": "#7D9988"
-}
-```
 
 ## Licença
 
 Este projeto está licenciado sob a [MIT License](LICENSE).
-
