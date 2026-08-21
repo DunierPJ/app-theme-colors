@@ -21,17 +21,16 @@ A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente 
 | Unidade | Responsabilidade |
 | --- | --- |
 | `App.ThemeInterfaces.pas` | Interfaces `IThemeManager`, `ISystemThemeDetector` e `ISystemBarsService`. |
-| `App.SystemThemeDetector.pas` | Implementação de `ISystemThemeDetector` para detecção de tema do SO. |
-| `App.SystemBarsService.pas` | Implementação de `ISystemBarsService` para estilização nativa de System Bars. |
-| `App.ThemeManager.pas` | Gerenciador core (`TThemeManagerImpl`) e Facade estático (`TThemeManager`) para compatibilidade retroativa. |
-| `App.ThemeApplier.pas` | Aplica as cores na árvore FMX a partir de `TagString`; cache de cor dominante. |
-| `App.ColorScheme.pas` | Record `TColorScheme` com as roles de cor e as constantes `LightScheme` / `DarkScheme`. |
-| `App.BitmapColor.pas` | Helper para descobrir a cor opaca dominante de um bitmap. |
-| `App.ThemeManager.pas` | Modo de tema (`TThemeMode`), detecção nativa do SO, controle das barras do Android (`ApplySystemBars`) e despacho de `TThemeChangedMessage`. |
-| `App.ThemeApplier.pas` | Aplica as cores na árvore FMX/Skia a partir do `TagString` com suporte a múltiplas regras. |
-| `App.ColorScheme.pas` | Record `TColorScheme` com as roles de cor e suporte a importação/exportação JSON (`FromJSON`, `LoadFromFile`, `ToJSON`). |
-| `App.BitmapColor.pas` | Helper `TBitmapHelper` para cor dominante e recoloração preservando transparência (`ReplaceOpaqueColor`). |
-| `App.ThemeMessage.pas` | Mensagens de notificação de troca de tema. |
+| `App.SystemThemeDetector.pas` | Implementação de `ISystemThemeDetector` para detecção do tema do SO. |
+| `App.ThemeSystemBarsAdapter.pas` | Adaptador que conecta a interface `ISystemBarsService` à suite nativa Android Bars. |
+| `App.SystemBars.pas` | Extension helper `TScreenHelper` e serviços FMX para manipulação de System Bars. |
+| `App.SystemBarsService.pas` | Serviço nativo Android `TSystemBarsServiceAndroid` registrador de serviços FMX. |
+| `App.SystemBars.Android.*` | Suite nativa Android (ColorController, InsetsCalculator, VisibilityController, EventListener, WindowFix). |
+| `App.ThemeManager.pas` | Gerenciador core (`TThemeManagerImpl`), `AutoSubscribe` e Facade estático (`TThemeManager`). |
+| `App.ThemeApplier.pas` | Aplica cores na árvore FMX e Skia (`TSkLabel`, `TSkSvg`, `TSkAnimatedImage`) via `TagString`. |
+| `App.ColorScheme.pas` | Record `TColorScheme` com roles semânticas (Material Design 3) e suporte JSON (`FromJSON`). |
+| `App.BitmapColor.pas` | Helper `TBitmapColorHelper` para cor dominante e recoloração preservando transparência. |
+| `App.ThemeMessage.pas` | Mensagens de notificação de troca de tema (`TThemeChangedMessage`). |
 
 ## Requisitos
 

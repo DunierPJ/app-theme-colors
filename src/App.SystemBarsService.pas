@@ -2,124 +2,287 @@ unit App.SystemBarsService;
 
 interface
 
+{$SCOPEDENUMS ON}
+{$IFDEF ANDROID}
+
 uses
-  System.SysUtils,
+  { Delphi }
   System.Classes,
+  System.SysUtils,
+  System.Types,
   System.UITypes,
-  App.ColorScheme,
-  App.ThemeInterfaces
-  {$IFDEF ANDROID}
-  , Androidapi.JNI.GraphicsContentViewText,
-  Androidapi.JNI.Os,
-  Androidapi.JNI.App,
-  Androidapi.Helpers
-  {$ENDIF};
+  FMX.Forms,
+  FMX.Platform,
+  { App.SystemBars }
+  App.SystemBars,
+  { Subcomponents }
+  App.SystemBars.Android.Types,
+  App.SystemBars.Android.Interfaces,
+  App.SystemBars.Android.WindowFix,
+  App.SystemBars.Android.InsetsCalculator,
+  App.SystemBars.Android.ColorController,
+  App.SystemBars.Android.VisibilityController,
+  App.SystemBars.Android.EventListener;
 
 type
-  TSystemBarsService = class(TInterfacedObject, ISystemBarsService)
-  public
-    procedure ApplySystemBars(const AScheme: TColorScheme; const AIsDark: Boolean);
+  { Backwards compatibility type aliases }
+  TAndroid9 = App.SystemBars.Android.Types.TAndroid9;
+  TAndroid10 = App.SystemBars.Android.Types.TAndroid10;
+  TAndroid11 = App.SystemBars.Android.Types.TAndroid11;
+{$IF CompilerVersion < 34.0}
+  TAndroidBeforeMarshmallow = App.SystemBars.Android.Types.TAndroidBeforeMarshmallow;
+{$IFEND}
+
+  { ISystemBarsServiceAndroid }
+
+  ISystemBarsServiceAndroid = interface(TScreenSystemBars.IFMXWindowSystemBarsService)
+    ['{77586947-BF49-4938-9A34-51588E8BD915}']
+    procedure CheckInsetsChanges(const AForm: TCommonCustomForm);
+    function HasGestureNavigationBar(const AForm: TCommonCustomForm): Boolean;
+    procedure TryFixInvisibleMode;
   end;
 
+  { TSystemBarsServiceAndroid }
+
+  TSystemBarsServiceAndroid = class(TInterfacedObject, ISystemBarsServiceAndroid, TScreenSystemBars.IFMXWindowSystemBarsService,
+    IFMXWindowSystemStatusBarService, IFMXFullScreenWindowService)
+  strict private
+    FWindowServiceFix: IWindowServiceFix;
+    FInsetsCalculator: ISystemBarsInsetsCalculator;
+    FVisibilityController: ISystemBarsVisibilityController;
+    FColorController: ISystemBarsColorController;
+    FEventListener: ISystemBarsEventListener;
+    FDefaultFullScreenService: IFMXFullScreenWindowService;
+    FDefaultStatusBarService: IFMXWindowSystemStatusBarService;
+    FRegisteredBarsService: Boolean;
+    FRegisteredStatusBarService: Boolean;
+  public
+    constructor Create(
+      const AWindowServiceFix: IWindowServiceFix = nil;
+      const AInsetsCalculator: ISystemBarsInsetsCalculator = nil;
+      const AVisibilityController: ISystemBarsVisibilityController = nil;
+      const AColorController: ISystemBarsColorController = nil;
+      const AEventListener: ISystemBarsEventListener = nil
+    );
+    destructor Destroy; override;
+
+    { ISystemBarsServiceAndroid }
+    procedure CheckInsetsChanges(const AForm: TCommonCustomForm);
+    function HasGestureNavigationBar(const AForm: TCommonCustomForm): Boolean;
+    procedure TryFixInvisibleMode;
+
+    { IFMXWindowSystemBarsService }
+    function GetInsets(const AForm: TCommonCustomForm): TRectF;
+    function GetTappableInsets(const AForm: TCommonCustomForm): TRectF;
+    procedure SetNavigationBarBackgroundColor(const AForm: TCommonCustomForm; const AColor: TAlphaColor);
+
+    { IFMXWindowSystemStatusBarService / IFMXWindowSystemBarsService }
+    procedure IFMXWindowSystemStatusBarService.SetBackgroundColor = SetStatusBarBackgroundColor;
+    procedure SetStatusBarBackgroundColor(const AForm: TCommonCustomForm; const AColor: TAlphaColor);
+    procedure SetVisibility(const AForm: TCommonCustomForm; const AMode: TScreenSystemBars.TVisibilityMode);
+
+    { IFMXFullScreenWindowService }
+    function GetFullScreen(const AForm: TCommonCustomForm): Boolean;
+    procedure SetFullScreen(const AForm: TCommonCustomForm; const AValue: Boolean);
+    procedure SetShowFullScreenIcon(const AForm: TCommonCustomForm; const AValue: Boolean);
+
+    { Properties for injected components }
+    property WindowServiceFix: IWindowServiceFix read FWindowServiceFix;
+    property InsetsCalculator: ISystemBarsInsetsCalculator read FInsetsCalculator;
+    property VisibilityController: ISystemBarsVisibilityController read FVisibilityController;
+    property ColorController: ISystemBarsColorController read FColorController;
+    property EventListener: ISystemBarsEventListener read FEventListener;
+  end;
+
+{$ELSE}
+implementation
+{$ENDIF}
+
+{$IFDEF ANDROID}
 implementation
 
-{ TSystemBarsService }
-
-procedure TSystemBarsService.ApplySystemBars(const AScheme: TColorScheme; const AIsDark: Boolean);
-{$IFDEF ANDROID}
 var
-  SurfaceColor: TAlphaColor;
-  IsDarkMode: Boolean;
-{$ENDIF}
+  FSystemBarsServiceAndroid: ISystemBarsServiceAndroid;
+
+{ TSystemBarsServiceAndroid }
+
+constructor TSystemBarsServiceAndroid.Create(
+  const AWindowServiceFix: IWindowServiceFix;
+  const AInsetsCalculator: ISystemBarsInsetsCalculator;
+  const AVisibilityController: ISystemBarsVisibilityController;
+  const AColorController: ISystemBarsColorController;
+  const AEventListener: ISystemBarsEventListener);
 begin
-{$IFDEF ANDROID}
-  SurfaceColor := AScheme.Surface;
-  IsDarkMode := AIsDark;
+  inherited Create;
 
-  // Executa em uma thread separada com pequeno atraso para sobrepor o ciclo padrão do FMX
-  TThread.CreateAnonymousThread(
-    procedure
-    begin
-      // Aguarda 150ms para garantir que o FMX terminou de renderizar a tela principal
-      Sleep(150);
+  // Initialize or store Window Fix
+  if Assigned(AWindowServiceFix) then
+    FWindowServiceFix := AWindowServiceFix
+  else
+    FWindowServiceFix := TWindowServiceFix.Create;
 
-      TThread.Synchronize(nil,
-        procedure
-        var
-          Window: JWindow;
-          DecorView: JView;
-          InsetsController: JWindowInsetsController;
-          ViewFlags: Integer;
-          Mask, Appearance: Integer;
-        begin
-          try
-            if (TAndroidHelper.Activity = nil) or (TAndroidHelper.Activity.getWindow = nil) then
-              Exit;
+  // Initialize or store Insets Calculator
+  if Assigned(AInsetsCalculator) then
+    FInsetsCalculator := AInsetsCalculator
+  else
+    FInsetsCalculator := TSystemBarsInsetsCalculator.Create;
 
-            Window := TAndroidHelper.Activity.getWindow;
-            if Window = nil then Exit;
+  // Initialize or store Color Controller
+  if Assigned(AColorController) then
+    FColorController := AColorController
+  else
+    FColorController := TSystemBarsColorController.Create(FInsetsCalculator);
 
-            DecorView := Window.getDecorView;
-            if DecorView = nil then Exit;
+  // Initialize or store Visibility Controller
+  if Assigned(AVisibilityController) then
+    FVisibilityController := AVisibilityController
+  else
+    FVisibilityController := TSystemBarsVisibilityController.Create(FColorController, FInsetsCalculator);
 
-            if TJBuild_VERSION.JavaClass.SDK_INT >= 21 then
-            begin
-              Window.clearFlags(TJWindowManager_LayoutParams.JavaClass.FLAG_TRANSLUCENT_STATUS or
-                                TJWindowManager_LayoutParams.JavaClass.FLAG_TRANSLUCENT_NAVIGATION);
+  // Initialize or store Event Listener
+  if Assigned(AEventListener) then
+    FEventListener := AEventListener
+  else
+    FEventListener := TSystemBarsEventListener.Create(FInsetsCalculator, FVisibilityController);
 
-              Window.addFlags(TJWindowManager_LayoutParams.JavaClass.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+  { IFMXWindowSystemBarsService }
+  if TPlatformServices.Current.SupportsPlatformService(TScreenSystemBars.IFMXWindowSystemBarsService) then
+    TPlatformServices.Current.RemovePlatformService(TScreenSystemBars.IFMXWindowSystemBarsService);
+  TPlatformServices.Current.AddPlatformService(TScreenSystemBars.IFMXWindowSystemBarsService, Self);
+  FRegisteredBarsService := True;
 
-              Window.setStatusBarColor(SurfaceColor);
-              Window.setNavigationBarColor(SurfaceColor);
-            end;
+  { IFMXWindowSystemStatusBarService }
+  if TPlatformServices.Current.SupportsPlatformService(IFMXWindowSystemStatusBarService, FDefaultStatusBarService) then
+    TPlatformServices.Current.RemovePlatformService(IFMXWindowSystemStatusBarService);
+  TPlatformServices.Current.AddPlatformService(IFMXWindowSystemStatusBarService, Self);
+  FRegisteredStatusBarService := True;
 
-            if TJBuild_VERSION.JavaClass.SDK_INT >= 30 then
-            begin
-              InsetsController := Window.getInsetsController;
-              if InsetsController <> nil then
-              begin
-                Mask := TJWindowInsetsController.JavaClass.APPEARANCE_LIGHT_STATUS_BARS or
-                        TJWindowInsetsController.JavaClass.APPEARANCE_LIGHT_NAVIGATION_BARS;
+  { IFMXFullScreenWindowService }
+  if TPlatformServices.Current.SupportsPlatformService(IFMXFullScreenWindowService, FDefaultFullScreenService) then
+    TPlatformServices.Current.RemovePlatformService(IFMXFullScreenWindowService);
+  TPlatformServices.Current.AddPlatformService(IFMXFullScreenWindowService, Self);
 
-                Appearance := 0;
-                if not IsDarkMode then
-                  Appearance := Mask;
-
-                InsetsController.setSystemBarsAppearance(Appearance, Mask);
-              end;
-            end
-            else
-            begin
-              ViewFlags := DecorView.getSystemUiVisibility;
-
-              if TJBuild_VERSION.JavaClass.SDK_INT >= 23 then
-              begin
-                if not IsDarkMode then
-                  ViewFlags := ViewFlags or TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                else
-                  ViewFlags := ViewFlags and not TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-              end;
-
-              if TJBuild_VERSION.JavaClass.SDK_INT >= 26 then
-              begin
-                if not IsDarkMode then
-                  ViewFlags := ViewFlags or TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                else
-                  ViewFlags := ViewFlags and not TJView.JavaClass.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-              end;
-
-              DecorView.setSystemUiVisibility(ViewFlags);
-            end;
-
-          except
-            on E: Exception do
-            begin
-              // Silencia exceções de ciclo de vida
-            end;
-          end;
-        end);
-    end).Start;
-{$ENDIF}
+  FEventListener.StartListening;
 end;
+
+destructor TSystemBarsServiceAndroid.Destroy;
+begin
+  if Assigned(FEventListener) then
+    FEventListener.StopListening;
+
+  if TPlatformServices.Current <> nil then
+  begin
+    { IFMXFullScreenWindowService }
+    TPlatformServices.Current.RemovePlatformService(IFMXFullScreenWindowService);
+    if Assigned(FDefaultFullScreenService) then
+      TPlatformServices.Current.AddPlatformService(IFMXFullScreenWindowService, FDefaultFullScreenService);
+    { IFMXWindowSystemBarsService }
+    if FRegisteredBarsService then
+      TPlatformServices.Current.RemovePlatformService(TScreenSystemBars.IFMXWindowSystemBarsService);
+    { IFMXWindowSystemStatusBarService }
+    if FRegisteredStatusBarService then
+    begin
+      TPlatformServices.Current.RemovePlatformService(IFMXWindowSystemStatusBarService);
+      if Assigned(FDefaultStatusBarService) then
+        TPlatformServices.Current.AddPlatformService(IFMXWindowSystemStatusBarService, FDefaultStatusBarService);
+    end;
+  end;
+
+  FEventListener := nil;
+  FVisibilityController := nil;
+  FColorController := nil;
+  FInsetsCalculator := nil;
+  FWindowServiceFix := nil;
+
+  inherited;
+end;
+
+procedure TSystemBarsServiceAndroid.CheckInsetsChanges(const AForm: TCommonCustomForm);
+begin
+  if Assigned(FEventListener) then
+    FEventListener.CheckInsetsChanges(AForm);
+end;
+
+function TSystemBarsServiceAndroid.GetFullScreen(const AForm: TCommonCustomForm): Boolean;
+begin
+  if Assigned(FVisibilityController) then
+    Result := FVisibilityController.GetFullScreen(AForm)
+  else
+    Result := False;
+end;
+
+function TSystemBarsServiceAndroid.GetInsets(const AForm: TCommonCustomForm): TRectF;
+begin
+  if Assigned(FInsetsCalculator) then
+    Result := FInsetsCalculator.GetInsets(AForm)
+  else
+    Result := TRectF.Empty;
+end;
+
+function TSystemBarsServiceAndroid.GetTappableInsets(const AForm: TCommonCustomForm): TRectF;
+begin
+  if Assigned(FInsetsCalculator) then
+    Result := FInsetsCalculator.GetTappableInsets(AForm)
+  else
+    Result := TRectF.Empty;
+end;
+
+function TSystemBarsServiceAndroid.HasGestureNavigationBar(const AForm: TCommonCustomForm): Boolean;
+begin
+  if Assigned(FInsetsCalculator) then
+    Result := FInsetsCalculator.HasGestureNavigationBar(AForm)
+  else
+    Result := False;
+end;
+
+procedure TSystemBarsServiceAndroid.SetFullScreen(const AForm: TCommonCustomForm; const AValue: Boolean);
+begin
+  if Assigned(FVisibilityController) then
+    FVisibilityController.SetFullScreen(AForm, AValue);
+end;
+
+procedure TSystemBarsServiceAndroid.SetNavigationBarBackgroundColor(const AForm: TCommonCustomForm; const AColor: TAlphaColor);
+begin
+  if Assigned(FColorController) then
+    FColorController.SetNavigationBarBackgroundColor(AForm, AColor);
+end;
+
+procedure TSystemBarsServiceAndroid.SetShowFullScreenIcon(const AForm: TCommonCustomForm; const AValue: Boolean);
+begin
+  if Assigned(FVisibilityController) then
+    FVisibilityController.SetShowFullScreenIcon(AForm, AValue);
+end;
+
+procedure TSystemBarsServiceAndroid.SetStatusBarBackgroundColor(const AForm: TCommonCustomForm; const AColor: TAlphaColor);
+begin
+  if Assigned(FColorController) then
+    FColorController.SetStatusBarBackgroundColor(AForm, AColor);
+end;
+
+procedure TSystemBarsServiceAndroid.SetVisibility(const AForm: TCommonCustomForm; const AMode: TScreenSystemBars.TVisibilityMode);
+begin
+  if Assigned(FEventListener) then
+    FEventListener.ChangeChecksEnabled := False;
+  try
+    if Assigned(FVisibilityController) then
+      FVisibilityController.SetVisibility(AForm, AMode);
+  finally
+    if Assigned(FEventListener) then
+      FEventListener.ChangeChecksEnabled := True;
+  end;
+  if Assigned(FEventListener) then
+    FEventListener.CheckInsetsChanges(AForm);
+end;
+
+procedure TSystemBarsServiceAndroid.TryFixInvisibleMode;
+begin
+  if Assigned(FVisibilityController) then
+    FVisibilityController.TryFixInvisibleMode;
+end;
+
+initialization
+  FSystemBarsServiceAndroid := TSystemBarsServiceAndroid.Create;
+
+{$ENDIF}
 
 end.

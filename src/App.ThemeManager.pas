@@ -10,7 +10,7 @@ uses
   App.ThemeMessage,
   App.ThemeInterfaces,
   App.SystemThemeDetector,
-  App.SystemBarsService;
+  App.ThemeSystemBarsAdapter;
 
 type
   TThemeMode = App.ThemeInterfaces.TThemeMode;
