@@ -122,8 +122,8 @@ begin
 
   if TMessageManager.DefaultManager <> nil then
   begin
-    // Detecta mudança via manifest configChanges="uiMode" (Activity não reinicia)
-    TMessageManager.DefaultManager.SubscribeToMessage(TApplicationStyleChangedMessage, AppearanceChanged);
+    // Detecta mudança via TSystemAppearanceChangedMessage (Android/iOS/Windows)
+    TMessageManager.DefaultManager.SubscribeToMessage(TSystemAppearanceChangedMessage, AppearanceChanged);
     // Detecta mudança quando o app volta ao foco (caso mais comum no Android)
     TMessageManager.DefaultManager.SubscribeToMessage(TApplicationEventMessage, AppBecameActive);
   end;
@@ -133,7 +133,7 @@ destructor TThemeManagerImpl.Destroy;
 begin
   if TMessageManager.DefaultManager <> nil then
   begin
-    TMessageManager.DefaultManager.Unsubscribe(TApplicationStyleChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.Unsubscribe(TSystemAppearanceChangedMessage, AppearanceChanged);
     TMessageManager.DefaultManager.Unsubscribe(TApplicationEventMessage, AppBecameActive);
   end;
   FSystemThemeDetector := nil;
