@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Messaging,
+  FMX.Types,
   App.ColorScheme,
   App.ThemeMessage,
   App.ThemeInterfaces,
@@ -115,13 +116,13 @@ begin
     FSystemBarsService := TSystemBarsService.Create;
 
   if TMessageManager.DefaultManager <> nil then
-    TMessageManager.DefaultManager.SubscribeToMessage(TThemeChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.SubscribeToMessage(TApplicationStyleChangedMessage, AppearanceChanged);
 end;
 
 destructor TThemeManagerImpl.Destroy;
 begin
   if TMessageManager.DefaultManager <> nil then
-    TMessageManager.DefaultManager.Unsubscribe(TThemeChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.Unsubscribe(TApplicationStyleChangedMessage, AppearanceChanged);
   FSystemThemeDetector := nil;
   FSystemBarsService := nil;
   inherited Destroy;

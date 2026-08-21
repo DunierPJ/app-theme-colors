@@ -11,6 +11,8 @@ uses
   FMX.Objects, 
   FMX.Text,
   FMX.Graphics,
+  FMX.Controls,
+  FMX.Forms,
   App.ColorScheme, 
   App.ThemeManager, 
   App.BitmapColor;
@@ -114,7 +116,10 @@ begin
 
     ClsName := AObject.ClassName;
 
-    if SameText(Kind, 'Fill') and (AObject is TShape) then
+    if SameText(Kind, 'Fill') and (AObject is TCommonCustomForm) then
+      TCommonCustomForm(AObject).Fill.Color := Cor
+
+    else if SameText(Kind, 'Fill') and (AObject is TShape) then
       TShape(AObject).Fill.Color := Cor
 
     else if SameText(Kind, 'Stroke') and (AObject is TShape) then
