@@ -7,6 +7,7 @@ uses
   System.Classes,
   System.Messaging,
   FMX.Types,
+  FMX.Platform,
   App.ColorScheme,
   App.ThemeMessage,
   App.ThemeInterfaces,
@@ -23,9 +24,11 @@ type
     FCustomDarkScheme: TColorScheme;
     FHasCustomLight: Boolean;
     FHasCustomDark: Boolean;
+    FLastKnownDark: Boolean;
     FSystemThemeDetector: ISystemThemeDetector;
     FSystemBarsService: ISystemBarsService;
     procedure AppearanceChanged(const Sender: TObject; const M: TMessage);
+    procedure AppBecameActive(const Sender: TObject; const M: TMessage);
     function GetMode: TThemeMode;
     procedure SetMode(const Value: TThemeMode);
   public
@@ -115,14 +118,24 @@ begin
   else
     FSystemBarsService := TSystemBarsService.Create;
 
+  FLastKnownDark := IsDark;
+
   if TMessageManager.DefaultManager <> nil then
+  begin
+    // Detecta mudança via manifest configChanges="uiMode" (Activity não reinicia)
     TMessageManager.DefaultManager.SubscribeToMessage(TApplicationStyleChangedMessage, AppearanceChanged);
+    // Detecta mudança quando o app volta ao foco (caso mais comum no Android)
+    TMessageManager.DefaultManager.SubscribeToMessage(TApplicationEventMessage, AppBecameActive);
+  end;
 end;
 
 destructor TThemeManagerImpl.Destroy;
 begin
   if TMessageManager.DefaultManager <> nil then
+  begin
     TMessageManager.DefaultManager.Unsubscribe(TApplicationStyleChangedMessage, AppearanceChanged);
+    TMessageManager.DefaultManager.Unsubscribe(TApplicationEventMessage, AppBecameActive);
+  end;
   FSystemThemeDetector := nil;
   FSystemBarsService := nil;
   inherited Destroy;
@@ -202,6 +215,7 @@ procedure TThemeManagerImpl.AppearanceChanged(const Sender: TObject; const M: TM
 begin
   if FMode = tmSystem then
   begin
+    FLastKnownDark := IsDark;
     ApplySystemBars;
     TThread.Queue(nil,
       procedure
@@ -209,6 +223,29 @@ begin
         if TMessageManager.DefaultManager <> nil then
           TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
       end);
+  end;
+end;
+
+procedure TThemeManagerImpl.AppBecameActive(const Sender: TObject; const M: TMessage);
+var
+  LCurrentDark: Boolean;
+begin
+  if (FMode = tmSystem) and
+     (M is TApplicationEventMessage) and
+     (TApplicationEventMessage(M).Value.Event = TApplicationEvent.BecameActive) then
+  begin
+    LCurrentDark := IsDark;
+    if LCurrentDark <> FLastKnownDark then
+    begin
+      FLastKnownDark := LCurrentDark;
+      ApplySystemBars;
+      TThread.Queue(nil,
+        procedure
+        begin
+          if TMessageManager.DefaultManager <> nil then
+            TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
+        end);
+    end;
   end;
 end;
 
