@@ -1,4 +1,4 @@
-﻿unit App.ThemeApplier;
+unit App.ThemeApplier;
 
 interface
 
