@@ -18,7 +18,10 @@ A biblioteca gerencia o modo de tema (System/Light/Dark), segue automaticamente 
 
 | Unidade | Responsabilidade |
 | --- | --- |
-| `App.ThemeManager.pas` | Modo de tema (`TThemeMode`), detecção do tema do sistema e despacho de `TThemeChangedMessage`. |
+| `App.ThemeInterfaces.pas` | Interfaces `IThemeManager`, `ISystemThemeDetector` e `ISystemBarsService`. |
+| `App.SystemThemeDetector.pas` | Implementação de `ISystemThemeDetector` para detecção de tema do SO. |
+| `App.SystemBarsService.pas` | Implementação de `ISystemBarsService` para estilização nativa de System Bars. |
+| `App.ThemeManager.pas` | Gerenciador core (`TThemeManagerImpl`) e Facade estático (`TThemeManager`) para compatibilidade retroativa. |
 | `App.ThemeApplier.pas` | Aplica as cores na árvore FMX a partir de `TagString`; cache de cor dominante. |
 | `App.ColorScheme.pas` | Record `TColorScheme` com as roles de cor e as constantes `LightScheme` / `DarkScheme`. |
 | `App.BitmapColor.pas` | Helper para descobrir a cor opaca dominante de um bitmap. |
@@ -115,9 +118,15 @@ O `TagString` segue o formato `Tipo:Role` (duas partes separadas por `:`). Parte
 
 ## Referência da API
 
-### `App.ThemeManager.pas` — `TThemeManager`
+### `App.ThemeManager.pas` — `TThemeManager` & `IThemeManager`
 
-Classe estática que concentra o estado do tema.
+A biblioteca utiliza um design orientado a interfaces com suporte a Injeção de Dependência e um Facade estático para compatibilidade retroativa:
+
+- **`IThemeManager`**: Interface principal que define operações de troca de modo, esquema ativo, e estilização de barras do sistema.
+- **`ISystemThemeDetector`**: Interface para abstrair a verificação se o SO está em Dark Mode.
+- **`ISystemBarsService`**: Interface para abstrair a estilização das barras de sistema (Status/Navigation Bars).
+- **`TThemeManagerImpl`**: Implementação que aceita `ISystemThemeDetector` e `ISystemBarsService` via construtor (Injeção de Dependência), facilitando testes unitários ou customizações.
+- **`TThemeManager`**: Facade estático mantido para 100% de compatibilidade retroativa.
 
 ```pascal
 type
@@ -128,9 +137,13 @@ type
 | --- | --- | --- |
 | `Mode` | propriedade de classe | Modo atual do tema. Ao ser alterado, dispara `TThemeChangedMessage`. |
 | `IsDark` | função de classe | Retorna `True` se o tema ativo é escuro (considera o modo do sistema quando `Mode = tmSystem`). |
-| `Scheme` | função de classe | Retorna `LightScheme` ou `DarkScheme` conforme o tema ativo. |
+| `Scheme` | função de classe | Retorna `LightScheme` ou `DarkScheme` (ou esquema customizado) conforme o tema ativo. |
+| `SetCustomSchemes` | procedimento de classe | Define esquemas customizados para Light e Dark. |
+| `LoadSchemesFromJSON` | procedimento de classe | Carrega e aplica esquemas a partir de strings JSON. |
+| `ApplySystemBars` | procedimento de classe | Aplica o estilo do tema às barras de status e navegação do SO. |
+| `Instance` | propriedade de classe | Acesso direto à instância `IThemeManager` subjacente. |
 
-Internamente, `TThemeManager` assina `TMessageSystemAppearanceChanged` (FMX) e, quando o sistema muda de aparência, reenvia `TThemeChangedMessage` para que a UI repinte.
+Internamente, `TThemeManagerImpl` assina `TSystemAppearanceChangedMessage` (FMX) e, quando o sistema muda de aparência, reenvia `TThemeChangedMessage` para que a UI repinte.
 
 ### `App.ThemeApplier.pas` — `TThemeApplier`
 

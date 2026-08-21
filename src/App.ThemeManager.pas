@@ -1,82 +1,227 @@
-﻿unit App.ThemeManager;
+unit App.ThemeManager;
 
 interface
 
 uses
-  System.UITypes, 
-  System.Messaging, 
-  FMX.Platform, 
-  App.ColorScheme, 
-  App.ThemeMessage;
+  System.SysUtils,
+  System.Classes,
+  System.Messaging,
+  App.ColorScheme,
+  App.ThemeMessage,
+  App.ThemeInterfaces,
+  App.SystemThemeDetector,
+  App.SystemBarsService;
 
 type
-  TThemeMode = (tmSystem, tmLight, tmDark);
+  TThemeMode = App.ThemeInterfaces.TThemeMode;
+
+  TThemeManagerImpl = class(TInterfacedObject, IThemeManager)
+  private
+    FMode: TThemeMode;
+    FCustomLightScheme: TColorScheme;
+    FCustomDarkScheme: TColorScheme;
+    FHasCustomLight: Boolean;
+    FHasCustomDark: Boolean;
+    FSystemThemeDetector: ISystemThemeDetector;
+    FSystemBarsService: ISystemBarsService;
+    procedure AppearanceChanged(const Sender: TObject; const M: TMessage);
+    function GetMode: TThemeMode;
+    procedure SetMode(const Value: TThemeMode);
+  public
+    constructor Create(const ASystemThemeDetector: ISystemThemeDetector = nil;
+      const ASystemBarsService: ISystemBarsService = nil);
+    destructor Destroy; override;
+    function IsDark: Boolean;
+    function Scheme: TColorScheme;
+    procedure SetCustomSchemes(const ALight, ADark: TColorScheme);
+    procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
+    procedure ApplySystemBars;
+    property Mode: TThemeMode read GetMode write SetMode;
+  end;
 
   TThemeManager = class
   private
-    class var FMode: TThemeMode;
-    class function SystemIsDark: Boolean; static;
-    class procedure AppearanceChanged(const Sender: TObject; const M: TMessage); static;
+    class var FInstance: IThemeManager;
+    class function GetMode: TThemeMode; static;
     class procedure SetMode(const Value: TThemeMode); static;
   public
     class constructor Create;
     class destructor Destroy;
-    class property Mode: TThemeMode read FMode write SetMode;
+    class property Mode: TThemeMode read GetMode write SetMode;
     class function IsDark: Boolean; static;
     class function Scheme: TColorScheme; static;
+    class procedure SetCustomSchemes(const ALight, ADark: TColorScheme); static;
+    class procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string); static;
+    class procedure ApplySystemBars; static;
+    class property Instance: IThemeManager read FInstance;
   end;
 
 implementation
 
-class constructor TThemeManager.Create;
+{ TThemeManagerImpl }
+
+constructor TThemeManagerImpl.Create(const ASystemThemeDetector: ISystemThemeDetector;
+  const ASystemBarsService: ISystemBarsService);
 begin
+  inherited Create;
   FMode := tmSystem;
-  TMessageManager.DefaultManager.SubscribeToMessage(TMessageReceivedNotification, AppearanceChanged);
+  FHasCustomLight := False;
+  FHasCustomDark := False;
+
+  if ASystemThemeDetector <> nil then
+    FSystemThemeDetector := ASystemThemeDetector
+  else
+    FSystemThemeDetector := TSystemThemeDetector.Create;
+
+  if ASystemBarsService <> nil then
+    FSystemBarsService := ASystemBarsService
+  else
+    FSystemBarsService := TSystemBarsService.Create;
+
+  if TMessageManager.DefaultManager <> nil then
+    TMessageManager.DefaultManager.SubscribeToMessage(TSystemAppearanceChangedMessage, AppearanceChanged);
 end;
 
-class destructor TThemeManager.Destroy;
+destructor TThemeManagerImpl.Destroy;
 begin
-  TMessageManager.DefaultManager.Unsubscribe(TMessageReceivedNotification, AppearanceChanged);
+  if TMessageManager.DefaultManager <> nil then
+    TMessageManager.DefaultManager.Unsubscribe(TSystemAppearanceChangedMessage, AppearanceChanged);
+  FSystemThemeDetector := nil;
+  FSystemBarsService := nil;
+  inherited Destroy;
 end;
 
-// e no setter de Mode, se você tornar a property com write de método em vez de campo direto:
-class procedure TThemeManager.SetMode(const Value: TThemeMode);
+function TThemeManagerImpl.GetMode: TThemeMode;
 begin
-  FMode := Value;
-  TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
+  Result := FMode;
 end;
 
-class function TThemeManager.SystemIsDark: Boolean;
-var
-  Svc: IFMXSystemAppearanceService;
+procedure TThemeManagerImpl.SetMode(const Value: TThemeMode);
 begin
-  Result := False;
-  if TPlatformServices.Current.SupportsPlatformService(IFMXSystemAppearanceService, Svc) then
-    Result := Svc.ThemeKind = TSystemThemeKind.Dark;
+  if FMode <> Value then
+  begin
+    FMode := Value;
+    ApplySystemBars;
+    if TMessageManager.DefaultManager <> nil then
+      TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
+  end;
 end;
 
-class function TThemeManager.IsDark: Boolean;
+function TThemeManagerImpl.IsDark: Boolean;
 begin
   case FMode of
     tmDark: Result := True;
     tmLight: Result := False;
   else
-    Result := SystemIsDark;
+    if FSystemThemeDetector <> nil then
+      Result := FSystemThemeDetector.IsSystemDark
+    else
+      Result := False;
   end;
+end;
+
+function TThemeManagerImpl.Scheme: TColorScheme;
+begin
+  if IsDark then
+  begin
+    if FHasCustomDark then
+      Result := FCustomDarkScheme
+    else
+      Result := DarkScheme;
+  end
+  else
+  begin
+    if FHasCustomLight then
+      Result := FCustomLightScheme
+    else
+      Result := LightScheme;
+  end;
+end;
+
+procedure TThemeManagerImpl.SetCustomSchemes(const ALight, ADark: TColorScheme);
+begin
+  FCustomLightScheme := ALight;
+  FCustomDarkScheme := ADark;
+  FHasCustomLight := True;
+  FHasCustomDark := True;
+  ApplySystemBars;
+  if TMessageManager.DefaultManager <> nil then
+    TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
+end;
+
+procedure TThemeManagerImpl.LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
+begin
+  SetCustomSchemes(
+    TColorScheme.FromJSON(ALightJson, LightScheme),
+    TColorScheme.FromJSON(ADarkJson, DarkScheme)
+  );
+end;
+
+procedure TThemeManagerImpl.ApplySystemBars;
+begin
+  if FSystemBarsService <> nil then
+    FSystemBarsService.ApplySystemBars(Scheme, IsDark);
+end;
+
+procedure TThemeManagerImpl.AppearanceChanged(const Sender: TObject; const M: TMessage);
+begin
+  if FMode = tmSystem then
+  begin
+    ApplySystemBars;
+    TThread.Queue(nil,
+      procedure
+      begin
+        if TMessageManager.DefaultManager <> nil then
+          TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
+      end);
+  end;
+end;
+
+{ TThemeManager }
+
+class constructor TThemeManager.Create;
+begin
+  FInstance := TThemeManagerImpl.Create;
+end;
+
+class destructor TThemeManager.Destroy;
+begin
+  FInstance := nil;
+end;
+
+class function TThemeManager.GetMode: TThemeMode;
+begin
+  Result := FInstance.Mode;
+end;
+
+class procedure TThemeManager.SetMode(const Value: TThemeMode);
+begin
+  FInstance.Mode := Value;
+end;
+
+class function TThemeManager.IsDark: Boolean;
+begin
+  Result := FInstance.IsDark;
 end;
 
 class function TThemeManager.Scheme: TColorScheme;
 begin
-  if IsDark then
-    Result := DarkScheme
-  else
-    Result := LightScheme;
+  Result := FInstance.Scheme;
 end;
 
-class procedure TThemeManager.AppearanceChanged(const Sender: TObject; const M: TMessage);
+class procedure TThemeManager.SetCustomSchemes(const ALight, ADark: TColorScheme);
 begin
-  // dispare aqui seu próprio evento/mensagem pra repintar a UI, ex:
-  TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
+  FInstance.SetCustomSchemes(ALight, ADark);
+end;
+
+class procedure TThemeManager.LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
+begin
+  FInstance.LoadSchemesFromJSON(ALightJson, ADarkJson);
+end;
+
+class procedure TThemeManager.ApplySystemBars;
+begin
+  FInstance.ApplySystemBars;
 end;
 
 end.
