@@ -3,6 +3,8 @@ unit App.ThemeInterfaces;
 interface
 
 uses
+  System.Classes,
+  System.Messaging,
   App.ColorScheme;
 
 type
@@ -27,6 +29,7 @@ type
     procedure SetCustomSchemes(const ALight, ADark: TColorScheme);
     procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
     procedure ApplySystemBars;
+    procedure AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener);
 
     property Mode: TThemeMode read GetMode write SetMode;
   end;

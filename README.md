@@ -87,19 +87,15 @@ TThemeManager.Mode := tmDark;   // tmLight, tmDark ou tmSystem
 TThemeApplier.ApplyToTree(Self);
 ```
 
-### 4. Carregar Temas Personalizados via JSON
+### 4. Reaja a mudanças de tema automaticamente (sem precisar de FormDestroy!)
 
-Assine `TThemeChangedMessage` e repinte a UI. Isso cobre tanto a troca manual de `Mode` quanto a mudança de aparência do sistema operacional:
+Use `TThemeManager.AutoSubscribe` no `FormCreate`. Ele inscreve sua tela para receber mensagens de troca de tema e **desinscreve automaticamente no momento em que a tela for destruída**, eliminando a necessidade de tratar o `FormDestroy` ou chamar `Unsubscribe` manualmente:
 
 ```pascal
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  TMessageManager.DefaultManager.SubscribeToMessage(TThemeChangedMessage, ThemeChanged);
-end;
-
-procedure TForm1.FormDestroy(Sender: TObject);
-begin
-  TMessageManager.DefaultManager.Unsubscribe(TThemeChangedMessage, ThemeChanged);
+  // Inscreve e desinscreve automaticamente no Destroy da Form!
+  TThemeManager.AutoSubscribe(Self, ThemeChanged);
 end;
 
 procedure TForm1.ThemeChanged(const Sender: TObject; const M: TMessage);
@@ -227,9 +223,7 @@ end;
 
 ### Recolorindo um ícone de bitmap
 
-Defina o `TagString` do `TImage` como `Bitmap:Primary`. Ao aplicar o tema, a cor dominante do bitmap é substituída pela cor `Primary`
-
-=======
+Defina o `TagString` do `TImage` como `Bitmap:Primary`. Ao aplicar o tema, a cor dominante do bitmap é substituída pela cor `Primary`.
 
 ## Licença
 

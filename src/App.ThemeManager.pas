@@ -36,6 +36,7 @@ type
     procedure SetCustomSchemes(const ALight, ADark: TColorScheme);
     procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string);
     procedure ApplySystemBars;
+    procedure AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener);
     property Mode: TThemeMode read GetMode write SetMode;
   end;
 
@@ -53,10 +54,47 @@ type
     class procedure SetCustomSchemes(const ALight, ADark: TColorScheme); static;
     class procedure LoadSchemesFromJSON(const ALightJson, ADarkJson: string); static;
     class procedure ApplySystemBars; static;
+    class procedure AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener); static;
     class property Instance: IThemeManager read FInstance;
   end;
 
 implementation
+
+type
+  TThemeAutoSubscriber = class(TComponent)
+  private
+    FTargetComponent: TComponent;
+    FListener: TMessageListener;
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent; ATargetComponent: TComponent; const AListener: TMessageListener); reintroduce;
+  end;
+
+{ TThemeAutoSubscriber }
+
+constructor TThemeAutoSubscriber.Create(AOwner: TComponent; ATargetComponent: TComponent; const AListener: TMessageListener);
+begin
+  inherited Create(AOwner);
+  FTargetComponent := ATargetComponent;
+  FListener := AListener;
+  if FTargetComponent <> nil then
+    FTargetComponent.FreeNotification(Self);
+  if TMessageManager.DefaultManager <> nil then
+    TMessageManager.DefaultManager.SubscribeToMessage(TThemeChangedMessage, FListener);
+end;
+
+procedure TThemeAutoSubscriber.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (AComponent = FTargetComponent) then
+  begin
+    if TMessageManager.DefaultManager <> nil then
+      TMessageManager.DefaultManager.Unsubscribe(TThemeChangedMessage, FListener);
+    FTargetComponent := nil;
+    Free;
+  end;
+end;
 
 { TThemeManagerImpl }
 
@@ -163,6 +201,12 @@ begin
     FSystemBarsService.ApplySystemBars(Scheme, IsDark);
 end;
 
+procedure TThemeManagerImpl.AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener);
+begin
+  if AOwner <> nil then
+    TThemeAutoSubscriber.Create(AOwner, AOwner, AListener);
+end;
+
 procedure TThemeManagerImpl.AppearanceChanged(const Sender: TObject; const M: TMessage);
 begin
   if FMode = tmSystem then
@@ -222,6 +266,11 @@ end;
 class procedure TThemeManager.ApplySystemBars;
 begin
   FInstance.ApplySystemBars;
+end;
+
+class procedure TThemeManager.AutoSubscribe(AOwner: TComponent; const AListener: TMessageListener);
+begin
+  FInstance.AutoSubscribe(AOwner, AListener);
 end;
 
 end.
