@@ -30,13 +30,6 @@ var
 begin
   Result := False;
 
-  if (TPlatformServices.Current <> nil) and
-     TPlatformServices.Current.SupportsPlatformService(IFMXSystemAppearanceService, Svc) then
-  begin
-    Result := (Svc.ThemeKind = TSystemThemeKind.Dark);
-    Exit;
-  end;
-
   {$IFDEF ANDROID}
   try
     if (TAndroidHelper.Context <> nil) and
@@ -46,11 +39,19 @@ begin
       UIOptions := TAndroidHelper.Context.getResources.getConfiguration.uiMode;
       Result := (UIOptions and TJConfiguration.JavaClass.UI_MODE_NIGHT_MASK) =
                 TJConfiguration.JavaClass.UI_MODE_NIGHT_YES;
+      Exit;
     end;
   except
     Result := False;
   end;
   {$ENDIF}
+
+  if (TPlatformServices.Current <> nil) and
+     TPlatformServices.Current.SupportsPlatformService(IFMXSystemAppearanceService, Svc) then
+  begin
+    Result := (Svc.ThemeKind = TSystemThemeKind.Dark);
+    Exit;
+  end;
 end;
 
 end.

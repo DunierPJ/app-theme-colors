@@ -27,7 +27,6 @@ type
     FLastKnownDark: Boolean;
     FSystemThemeDetector: ISystemThemeDetector;
     FSystemBarsService: ISystemBarsService;
-    procedure AppearanceChanged(const Sender: TObject; const M: TMessage);
     procedure AppBecameActive(const Sender: TObject; const M: TMessage);
     function GetMode: TThemeMode;
     procedure SetMode(const Value: TThemeMode);
@@ -121,21 +120,14 @@ begin
   FLastKnownDark := IsDark;
 
   if TMessageManager.DefaultManager <> nil then
-  begin
-    // Detecta mudança via TSystemAppearanceChangedMessage (Android/iOS/Windows)
-    TMessageManager.DefaultManager.SubscribeToMessage(TSystemAppearanceChangedMessage, AppearanceChanged);
-    // Detecta mudança quando o app volta ao foco (caso mais comum no Android)
     TMessageManager.DefaultManager.SubscribeToMessage(TApplicationEventMessage, AppBecameActive);
-  end;
 end;
 
 destructor TThemeManagerImpl.Destroy;
 begin
   if TMessageManager.DefaultManager <> nil then
-  begin
-    TMessageManager.DefaultManager.Unsubscribe(TSystemAppearanceChangedMessage, AppearanceChanged);
     TMessageManager.DefaultManager.Unsubscribe(TApplicationEventMessage, AppBecameActive);
-  end;
+
   FSystemThemeDetector := nil;
   FSystemBarsService := nil;
   inherited Destroy;
@@ -211,21 +203,6 @@ begin
     TThemeAutoSubscriber.Create(AOwner, AOwner, AListener);
 end;
 
-procedure TThemeManagerImpl.AppearanceChanged(const Sender: TObject; const M: TMessage);
-begin
-  if FMode = tmSystem then
-  begin
-    FLastKnownDark := IsDark;
-    ApplySystemBars;
-    TThread.Queue(nil,
-      procedure
-      begin
-        if TMessageManager.DefaultManager <> nil then
-          TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
-      end);
-  end;
-end;
-
 procedure TThemeManagerImpl.AppBecameActive(const Sender: TObject; const M: TMessage);
 var
   LCurrentDark: Boolean;
@@ -239,12 +216,8 @@ begin
     begin
       FLastKnownDark := LCurrentDark;
       ApplySystemBars;
-      TThread.Queue(nil,
-        procedure
-        begin
-          if TMessageManager.DefaultManager <> nil then
-            TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
-        end);
+      if TMessageManager.DefaultManager <> nil then
+        TMessageManager.DefaultManager.SendMessage(nil, TThemeChangedMessage.Create);
     end;
   end;
 end;
