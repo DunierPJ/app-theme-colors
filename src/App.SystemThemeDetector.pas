@@ -94,8 +94,6 @@ end;
 
 procedure TSystemThemeDetector.TConfigChangeListener.onConfigurationChanged(newConfig: JConfiguration);
 begin
-  // Chamado pelo Android só quando a configuração muda de verdade
-  // (inclui uiMode/dark mode). Zero polling, zero bateria extra.
   if Assigned(FOwner) then
     FOwner.HandleConfigurationChanged;
 end;
